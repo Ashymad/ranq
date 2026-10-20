@@ -1,15 +1,15 @@
 #!/usr/bin/env raku
 enum TokenType <
-    Identifier
-    Constant
-    IntT
-    VoidT
-    Return
-    OpenParen
-    CloseParen
-    OpenBrace
-    CloseBrace
-    Semicolon
+    t_ident
+    t_const
+    t_int
+    t_void
+    t_return
+    t_paren_l
+    t_paren_r
+    t_brace_l
+    t_brace_r
+    t_semicolon
 >;
 
 class Token {
@@ -18,24 +18,19 @@ class Token {
 }
 
 class Tokenizer {
-    my %keywords = int => IntT, void => VoidT, return => Return; 
+    my %keywords = int => t_int, void => t_void, return => t_return; 
 
-    has Int $!idx = 0;
-    has Str $!text is built;
+    has Str $.text is required is rw;
 
     method push(Match $match, TokenType $type?) {
-        $!idx += $match.to - $match.from;
+        $.text .= substr($match.to);
         with $type {
             take Token.new(type => $type, lexeme => "$match");
         }
     }
 
     method empty() {
-        return $!idx >= $!text.chars;
-    }
-
-    method text() {
-        return $!text.substr($!idx);
+        return $.text.chars == 0;
     }
 
     method parse(Str $text) {
@@ -51,26 +46,26 @@ class Tokenizer {
                         if %keywords«"$/"»:exists {
                             $this.push($/, %keywords«"$/"»);
                         } else {
-                            $this.push($/, Identifier);
+                            $this.push($/, t_ident);
                         }
                     }
                     when /^<[0..9]>+/ {
-                        $this.push($/, Constant);
+                        $this.push($/, t_const);
                     }
                     when /^\(/ {
-                        $this.push($/, OpenParen);
+                        $this.push($/, t_paren_l);
                     }
                     when /^\)/ {
-                        $this.push($/, CloseParen);
-                    }
-                    when /^\}/ {
-                        $this.push($/, CloseBrace);
+                        $this.push($/, t_paren_r);
                     }
                     when /^\{/ {
-                        $this.push($/, OpenBrace);
+                        $this.push($/, t_brace_l);
+                    }
+                    when /^\}/ {
+                        $this.push($/, t_brace_r);
                     }
                     when /^\;/ {
-                        $this.push($/, Semicolon);
+                        $this.push($/, t_semicolon);
                     }
                     default {
                         say "Unrecognized character at $_";
@@ -82,9 +77,5 @@ class Tokenizer {
 }
 
 for Tokenizer.parse(slurp @*ARGS[0]) -> $token {
-    print $token.type;
-    with $token.lexeme {
-        print ": {$token.lexeme}";
-    }
-    say "";
+    say "{$token.type}(\"{$token.lexeme}\")";
 }

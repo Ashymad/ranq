@@ -1,0 +1,72 @@
+#!/usr/bin/env raku
+#
+enum TokenType <
+    Identifier
+    Constant
+    Int
+    Void
+    Return
+    OpenParen
+    CloseParen
+    OpenBrace
+    CloseBrace
+    Semicolon
+>;
+
+class Token {
+    has $.type;
+    has $.lexeme;
+}
+
+our %keywords = int => Int, void => Void, return => Return; 
+
+sub tokenize(Str $str) {
+    my $idx = 0;
+    my @tokens;
+    while ($idx < $str.chars) {
+        given $str.substr($idx) {
+            when /^\s+/ {
+                $idx += $/.to - $/.from;
+            }
+            when /^<[a..zA..Z_]>+/ {
+                if %keywords«"$/"»:exists {
+                    @tokens.push(Token.new(type => %keywords«"$/"»));
+                } else {
+                    @tokens.push(Token.new(type => Identifier,
+                                           lexeme => "$/"));
+                }
+                $idx += $/.to - $/.from;
+            }
+            when /^<[0..9]>+/ {
+                @tokens.push(Token.new(type => Constant,
+                                       lexeme => "$/"));
+                $idx += $/.to - $/.from;
+            }
+            when /^\(/ {
+                @tokens.push(Token.new(type => OpenParen));
+                $idx += 1;
+            }
+            when /^\)/ {
+                @tokens.push(Token.new(type => CloseParen));
+                $idx += 1;
+            }
+            when /^\}/ {
+                @tokens.push(Token.new(type => CloseBrace));
+                $idx += 1;
+            }
+            when /^\{/ {
+                @tokens.push(Token.new(type => OpenBrace));
+                $idx += 1;
+            }
+            when /^\;/ {
+                @tokens.push(Token.new(type => Semicolon));
+                $idx += 1;
+            }
+        }
+    }
+    return @tokens;
+}
+
+for tokenize(slurp @*ARGS[0]) -> $token {
+    say $token;
+}

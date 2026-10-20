@@ -1,0 +1,32 @@
+#!/bin/sh
+
+set -e
+
+endstage=link
+
+while :; do
+    case $1 in
+        --lex) endstage=lex ;;
+        --parse) endstage=parse ;;
+        --codegen) endstage=codegen ;;
+        -S) endstage=assemble ;;
+        -*) echo "Unknown option: $1"; exit 1 ;;
+        '') break ;;
+        *) file="$1" ;;
+    esac
+    shift
+done
+
+CPP="${CPP:-gcc -E -P}"
+ASM="${ASM:-gcc}"
+CC1="${CC1:-gcc -x c -S}"
+
+OUT="${file%.*}"
+
+$CPP "$file" -o "$OUT.p"
+$CC1 "$OUT.p" -o "$OUT.s"
+rm "$OUT.p"
+if [ "$endstage" = link ]; then
+    $ASM "$OUT.s" -o "$OUT"
+    rm "$OUT.s"
+fi

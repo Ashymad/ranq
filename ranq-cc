@@ -19,13 +19,14 @@ class Token {
 
 class Tokenizer {
     my %keywords = int => t_int, void => t_void, return => t_return; 
+    my %singles = ';' => t_semicolon, ')' => t_paren_l, '(' => t_paren_r, '{' => t_brace_l, '}' => t_brace_r;
 
     has Str $.text is required is rw;
 
-    method push(Match $match, TokenType $type?) {
-        $.text .= substr($match.to);
+    method push(Str $lexeme, TokenType $type?) {
+        $.text .= substr($lexeme.chars);
         with $type {
-            take Token.new(type => $type, lexeme => "$match");
+            take Token.new(type => $type, lexeme => "$lexeme");
         }
     }
 
@@ -40,35 +41,25 @@ class Tokenizer {
             while (!$this.empty) {
                 given $this.text {
                     when /^\s+/ {
-                        $this.push($/);
+                        $this.push("$/");
                     }
                     when /^<[a..zA..Z_]>+/ {
                         if %keywords«"$/"»:exists {
-                            $this.push($/, %keywords«"$/"»);
+                            $this.push("$/", %keywords«"$/"»);
                         } else {
-                            $this.push($/, t_ident);
+                            $this.push("$/", t_ident);
                         }
                     }
                     when /^<[0..9]>+/ {
-                        $this.push($/, t_const);
-                    }
-                    when /^\(/ {
-                        $this.push($/, t_paren_l);
-                    }
-                    when /^\)/ {
-                        $this.push($/, t_paren_r);
-                    }
-                    when /^\{/ {
-                        $this.push($/, t_brace_l);
-                    }
-                    when /^\}/ {
-                        $this.push($/, t_brace_r);
-                    }
-                    when /^\;/ {
-                        $this.push($/, t_semicolon);
+                        $this.push("$/", t_const);
                     }
                     default {
-                        say "Unrecognized character at $_";
+                        my $char = $_.substr(0, 1);
+                        if %singles«"$char"»:exists {
+                            $this.push($char, %singles«"$char"»);
+                        } else {
+                            say "Unrecognized character: '$char'";
+                        }
                     }
                 }
             }

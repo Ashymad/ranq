@@ -1,10 +1,9 @@
 #!/usr/bin/env raku
-#
 enum TokenType <
     Identifier
     Constant
-    Int
-    Void
+    IntT
+    VoidT
     Return
     OpenParen
     CloseParen
@@ -14,59 +13,78 @@ enum TokenType <
 >;
 
 class Token {
-    has $.type;
-    has $.lexeme;
+    has TokenType $.type is required;
+    has Str $.lexeme;
 }
 
-our %keywords = int => Int, void => Void, return => Return; 
+class Tokenizer {
+    my %keywords = int => IntT, void => VoidT, return => Return; 
 
-sub tokenize(Str $str) {
-    my $idx = 0;
-    my @tokens;
-    while ($idx < $str.chars) {
-        given $str.substr($idx) {
-            when /^\s+/ {
-                $idx += $/.to - $/.from;
-            }
-            when /^<[a..zA..Z_]>+/ {
-                if %keywords«"$/"»:exists {
-                    @tokens.push(Token.new(type => %keywords«"$/"»));
-                } else {
-                    @tokens.push(Token.new(type => Identifier,
-                                           lexeme => "$/"));
+    has Int $!idx = 0;
+    has Str $!text is built;
+
+    method push(Match $match, TokenType $type?) {
+        $!idx += $match.to - $match.from;
+        with $type {
+            take Token.new(type => $type, lexeme => "$match");
+        }
+    }
+
+    method empty() {
+        return $!idx >= $!text.chars;
+    }
+
+    method text() {
+        return $!text.substr($!idx);
+    }
+
+    method parse(Str $text) {
+        my $this = self.new(text => $text);
+
+        gather {
+            while (!$this.empty) {
+                given $this.text {
+                    when /^\s+/ {
+                        $this.push($/);
+                    }
+                    when /^<[a..zA..Z_]>+/ {
+                        if %keywords«"$/"»:exists {
+                            $this.push($/, %keywords«"$/"»);
+                        } else {
+                            $this.push($/, Identifier);
+                        }
+                    }
+                    when /^<[0..9]>+/ {
+                        $this.push($/, Constant);
+                    }
+                    when /^\(/ {
+                        $this.push($/, OpenParen);
+                    }
+                    when /^\)/ {
+                        $this.push($/, CloseParen);
+                    }
+                    when /^\}/ {
+                        $this.push($/, CloseBrace);
+                    }
+                    when /^\{/ {
+                        $this.push($/, OpenBrace);
+                    }
+                    when /^\;/ {
+                        $this.push($/, Semicolon);
+                    }
+                    default {
+                        say "Unrecognized character at $_";
+                    }
                 }
-                $idx += $/.to - $/.from;
-            }
-            when /^<[0..9]>+/ {
-                @tokens.push(Token.new(type => Constant,
-                                       lexeme => "$/"));
-                $idx += $/.to - $/.from;
-            }
-            when /^\(/ {
-                @tokens.push(Token.new(type => OpenParen));
-                $idx += 1;
-            }
-            when /^\)/ {
-                @tokens.push(Token.new(type => CloseParen));
-                $idx += 1;
-            }
-            when /^\}/ {
-                @tokens.push(Token.new(type => CloseBrace));
-                $idx += 1;
-            }
-            when /^\{/ {
-                @tokens.push(Token.new(type => OpenBrace));
-                $idx += 1;
-            }
-            when /^\;/ {
-                @tokens.push(Token.new(type => Semicolon));
-                $idx += 1;
             }
         }
     }
-    return @tokens;
 }
 
-for tokenize(slurp @*ARGS[0]) -> $token {
-    say $token;
+for Tokenizer.parse(slurp @*ARGS[0]) -> $token {
+    print $token.type;
+    with $token.lexeme {
+        print ": {$token.lexeme}";
+    }
+    say "";
 }

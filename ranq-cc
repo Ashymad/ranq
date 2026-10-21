@@ -20,6 +20,7 @@ class Token {
 class Tokenizer {
     my %keywords = int => t_int, void => t_void, return => t_return; 
     my %singles = ';' => t_semicolon, ')' => t_paren_l, '(' => t_paren_r, '{' => t_brace_l, '}' => t_brace_r;
+    my @boundary = Array.new(%singles.keys.map({"\\" ~ $_})).append("\\s");
 
     has Str $.text is required is rw;
 
@@ -40,17 +41,17 @@ class Tokenizer {
         gather {
             while (!$this.empty) {
                 given $this.text {
-                    when /^\s+/ {
+                    when rx/^\s+/ {
                         $this.push("$/");
                     }
-                    when /^<[a..zA..Z_]>+/ {
+                    when rx/ ^<[a..zA..Z_]>+<?@boundary> / {
                         if %keywords«"$/"»:exists {
                             $this.push("$/", %keywords«"$/"»);
                         } else {
                             $this.push("$/", t_ident);
                         }
                     }
-                    when /^<[0..9]>+/ {
+                    when rx/ ^<[0..9]>+<?@boundary> / {
                         $this.push("$/", t_const);
                     }
                     default {
@@ -59,6 +60,7 @@ class Tokenizer {
                             $this.push($char, %singles«"$char"»);
                         } else {
                             say "Unrecognized character: '$char'";
+                            exit 1;
                         }
                     }
                 }
@@ -68,5 +70,5 @@ class Tokenizer {
 }
 
 for Tokenizer.parse(slurp @*ARGS[0]) -> $token {
-    say "{$token.type}(\"{$token.lexeme}\")";
+    "%-10s %-10s\n".printf($token.type, $token.lexeme);
 }

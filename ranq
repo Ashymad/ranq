@@ -19,7 +19,7 @@ done
 
 CPP="${CPP:-gcc -E -P}"
 ASM="${ASM:-gcc}"
-CC1="${CC1:-gcc -x c -S}"
+CC1="${CC1:-$PWD/ranq-cc}"
 
 OUT="${file%.*}"
 

@@ -13,7 +13,14 @@ given @*ARGS[0] {
     when "parse" {
         say "{Parser.parse(Lexer.parse(slurp @*ARGS[1]))}"
     }
+    when "codegen" {
+        say "{Parser.parse(Lexer.parse(slurp @*ARGS[1])).gen}"
+    }
+    when "assemble" {
+        print "{Parser.parse(Lexer.parse(slurp @*ARGS[1])).gen.asm}"
+    }
     default {
-        say "Unsupported mode: $_"
+        say "Unknown function: $_";
+        exit 2;
     }
 }

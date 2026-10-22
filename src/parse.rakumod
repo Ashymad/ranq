@@ -1,9 +1,10 @@
 unit module parse;
 
 use lex;
+use codegen;
 
-role Node {
-    method print { ... }
+role Node is export {
+    method gen { ... }
 }
 
 class Constant does Node {
@@ -12,6 +13,10 @@ class Constant does Node {
     method Str() {
         return "Constant( $.integer )"
     }
+
+    method gen() {
+        return Immediate.new(integer => $.integer);
+    }
 }
 
 class Return does Node {
@@ -19,6 +24,13 @@ class Return does Node {
     
     method Str() {
         return "Return( $.const )"
+    }
+
+    method gen() {
+        gather {
+            take Mov.new(src => $.const.gen, dst => Register.new());
+            take Ret.new();
+        }
     }
 }
 
@@ -29,6 +41,10 @@ class Function does Node {
     method Str() {
         return "Function( name=\"$.name\", body=$.body )"
     }
+
+    method gen() {
+        return Subroutine.new(name => $.name, instructions => $.body.gen);
+    }
 }
 
 class Program does Node {
@@ -36,6 +52,10 @@ class Program does Node {
 
     method Str() {
         return "Program( $.function )"
+    }
+
+    method gen() {
+        return Assembly.new(function => $.function.gen);
     }
 }
 

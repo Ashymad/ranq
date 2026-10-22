@@ -18,14 +18,13 @@ while :; do
 done
 
 CPP="${CPP:-gcc -E -P}"
-ASM="${ASM:-gcc -x asm}"
+ASM="${ASM:-gcc -x assembler}"
 CC1="${CC1:-$PWD/ranq-cc}"
 
 OUT="${file%.*}"
 
-$CC1 "$endstage" <($CPP "$file") -o "$OUT.s"
-
 if [ "$endstage" = link ]; then
-    $ASM "$OUT.s" -o "$OUT"
-    rm "$OUT.s"
+    $CC1 "assemble" <($CPP "$file") | $ASM - -o "$OUT"
+else
+    $CC1 "$endstage" <($CPP "$file")
 fi

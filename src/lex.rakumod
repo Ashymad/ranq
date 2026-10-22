@@ -1,0 +1,78 @@
+unit module lex;
+
+enum TokenType <
+    t_ident
+    t_const
+    t_int
+    t_void
+    t_return
+    t_paren_l
+    t_paren_r
+    t_brace_l
+    t_brace_r
+    t_semicolon
+>;
+
+class Token {
+    has TokenType $.type is required;
+    has Str $.lexeme;
+}
+
+class Lexer::UnrecognizedCharacter is Exception {
+    has Str $.character;
+
+    method message() {
+        say "Could not find a matching token for a string starting with $.character"
+    }
+}
+
+class Lexer is export {
+    my %keywords = int => t_int, void => t_void, return => t_return; 
+    my %singles = ';' => t_semicolon, ')' => t_paren_l, '(' => t_paren_r, '{' => t_brace_l, '}' => t_brace_r;
+    my @boundary = Array.new(%singles.keys.map({"\\" ~ $_})).append("\\s");
+
+    has Str $.text is required is rw;
+
+    method push(Str $lexeme, TokenType $type?) {
+        $.text .= substr($lexeme.chars);
+        with $type {
+            take Token.new(type => $type, lexeme => "$lexeme");
+        }
+    }
+
+    method empty() {
+        return $.text.chars == 0;
+    }
+
+    method parse(Str $text) {
+        my $this = self.new(text => $text);
+
+        gather {
+            while (!$this.empty) {
+                given $this.text {
+                    when rx/^\s+/ {
+                        $this.push("$/");
+                    }
+                    when rx/ ^<[a..zA..Z_]>+<?@boundary> / {
+                        if %keywords«"$/"»:exists {
+                            $this.push("$/", %keywords«"$/"»);
+                        } else {
+                            $this.push("$/", t_ident);
+                        }
+                    }
+                    when rx/ ^<[0..9]>+<?@boundary> / {
+                        $this.push("$/", t_const);
+                    }
+                    default {
+                        my $char = $_.substr(0, 1);
+                        if %singles«"$char"»:exists {
+                            $this.push($char, %singles«"$char"»);
+                        } else {
+                            Lexer::UnrecognizedCharacter.new(character => $char).throw;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

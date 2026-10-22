@@ -23,7 +23,7 @@ CC1="${CC1:-$PWD/ranq-cc}"
 
 OUT="${file%.*}"
 
-$CC1 <($CPP "$file") -o "$OUT.s"
+$CC1 "$endstage" <($CPP "$file") -o "$OUT.s"
 
 if [ "$endstage" = link ]; then
     $ASM "$OUT.s" -o "$OUT"

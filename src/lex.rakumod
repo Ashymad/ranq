@@ -1,6 +1,6 @@
 unit module lex;
 
-enum TokenType <
+enum TokenType is export <
     t_ident
     t_const
     t_int
@@ -11,6 +11,7 @@ enum TokenType <
     t_brace_l
     t_brace_r
     t_semicolon
+    t_eof
 >;
 
 class Token {
@@ -22,13 +23,13 @@ class Lexer::UnrecognizedCharacter is Exception {
     has Str $.character;
 
     method message() {
-        say "Could not find a matching token for a string starting with $.character"
+        return "Could not find a matching token for a string starting with $.character"
     }
 }
 
 class Lexer is export {
     my %keywords = int => t_int, void => t_void, return => t_return; 
-    my %singles = ';' => t_semicolon, ')' => t_paren_l, '(' => t_paren_r, '{' => t_brace_l, '}' => t_brace_r;
+    my %singles = ';' => t_semicolon, '(' => t_paren_l, ')' => t_paren_r, '{' => t_brace_l, '}' => t_brace_r;
     my @boundary = Array.new(%singles.keys.map({"\\" ~ $_})).append("\\s");
 
     has Str $.text is required is rw;
@@ -73,6 +74,7 @@ class Lexer is export {
                     }
                 }
             }
+            take Token.new(type => t_eof, lexeme => "␄");
         }
     }
 }

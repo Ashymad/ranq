@@ -2,7 +2,18 @@
 
 use lib "src";
 use lex;
+use parse;
 
-for Lexer.parse(slurp @*ARGS[0]) -> $token {
-    "%-10s %-10s\n".printf($token.type, $token.lexeme);
+given @*ARGS[0] {
+    when "lex" {
+        for Lexer.parse(slurp @*ARGS[1]) -> $token {
+            "%-10s %-10s\n".printf($token.type, $token.lexeme);
+        }
+    }
+    when "parse" {
+        say "{Parser.parse(Lexer.parse(slurp @*ARGS[1]))}"
+    }
+    default {
+        say "Unsupported mode: $_"
+    }
 }

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 
@@ -18,14 +18,13 @@ while :; do
 done
 
 CPP="${CPP:-gcc -E -P}"
-ASM="${ASM:-gcc}"
+ASM="${ASM:-gcc -x asm}"
 CC1="${CC1:-$PWD/ranq-cc}"
 
 OUT="${file%.*}"
 
-$CPP "$file" -o "$OUT.p"
-$CC1 "$OUT.p" -o "$OUT.s"
-rm "$OUT.p"
+$CC1 <($CPP "$file") -o "$OUT.s"
+
 if [ "$endstage" = link ]; then
     $ASM "$OUT.s" -o "$OUT"
     rm "$OUT.s"

@@ -67,8 +67,7 @@ class Tokenizer {
                         if %singles«"$char"»:exists {
                             $this.push($char, %singles«"$char"»);
                         } else {
-                            my $error = Tokenizer::UnrecognizedCharacter.new(character => $char);
-                            $error.throw;
+                            Tokenizer::UnrecognizedCharacter.new(character => $char).throw;
                         }
                     }
                 }

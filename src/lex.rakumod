@@ -11,6 +11,9 @@ enum TokenType is export <
     t_brace_l
     t_brace_r
     t_semicolon
+    t_tilde
+    t_minus
+    t_decrement
     t_eof
 >;
 
@@ -27,10 +30,29 @@ class Lexer::UnrecognizedCharacter is Exception {
     }
 }
 
+sub substers(Str $str) {
+    gather {
+        loop (my $i = $str.chars; $i > 0; $i--) {
+            take $str.substr(0, $i);
+        }
+    }
+}
+
 class Lexer is export {
-    my %keywords = int => t_int, void => t_void, return => t_return; 
-    my %singles = ';' => t_semicolon, '(' => t_paren_l, ')' => t_paren_r, '{' => t_brace_l, '}' => t_brace_r;
-    my @boundary = Array.new(%singles.keys.map({"\\" ~ $_})).append("\\s");
+    my %keywords = 'int' => t_int,
+                   'void' => t_void,
+                   'return' => t_return; 
+
+    my %singles = ';' => t_semicolon,
+                  '(' => t_paren_l,
+                  ')' => t_paren_r,
+                  '{' => t_brace_l,
+                  '}' => t_brace_r,
+                  '-' => t_minus,
+                  '~' => t_tilde,
+                  '--' => t_decrement;
+
+    my @boundary = Array.new(%singles.keys.grep({.chars == 1}).map({"\\" ~ $_})).append("\\s");
 
     has Str $.text is required is rw;
 
@@ -65,12 +87,12 @@ class Lexer is export {
                         $this.push("$/", t_const);
                     }
                     default {
-                        my $char = $_.substr(0, 1);
-                        if %singles«"$char"»:exists {
-                            $this.push($char, %singles«"$char"»);
-                        } else {
-                            Lexer::UnrecognizedCharacter.new(character => $char).throw;
+                        for substers($_.substr(0, 2)) -> $subs {
+                            if %singles«"$subs"»:exists {
+                                succeed $this.push($subs, %singles«"$subs"»);
+                            }
                         }
+                        Lexer::UnrecognizedCharacter.new(character => $_).throw;
                     }
                 }
             }

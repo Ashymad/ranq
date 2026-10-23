@@ -7,7 +7,7 @@ use parse;
 given @*ARGS[0] {
     when "lex" {
         for Lexer.parse(slurp @*ARGS[1]) -> $token {
-            "%-10s %-10s\n".printf($token.type, $token.lexeme);
+            "%-15s %s\n".printf($token.type, $token.lexeme);
         }
     }
     when "parse" {

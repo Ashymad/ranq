@@ -1,21 +1,49 @@
 unit module parse;
 
-use lex;
-use codegen;
+use tok;
+use asm;
 
-role Node is export {
+class UnexpectedToken is Exception {
+    has Str $.expected;
+    has Str $.found;
+
+    method message() {
+        "Expected $.expected, but found $.found"
+    }
+}
+
+
+sub chomp($tokens is rw, $expected) {
+    my $tok = $tokens.pull-one;
+    if ($tok.type == $expected) {
+        return $tok.lexeme;
+    } else {
+        UnexpectedToken.new(
+            expected => $expected.Str,
+            found => $tok.type.Str
+        ).throw;
+    }
+}
+
+role Node  {
     method gen { ... }
+    method Str { ... }
+    method parse { ... }
 }
 
 class Constant does Node {
     has Int $.integer;
     
     method Str() {
-        return "Constant( $.integer )"
+        "Constant( $.integer )"
     }
 
     method gen() {
-        return Immediate.new(integer => $.integer);
+        asm::Immediate.new(integer => $.integer);
+    }
+
+    method parse($tokens is rw) {
+        return Constant.new(integer => chomp($tokens, t_const).Int);
     }
 }
 
@@ -28,11 +56,23 @@ class Return does Node {
 
     method gen() {
         gather {
-            take Mov.new(src => $.const.gen, dst => Register.new());
-            take Ret.new();
+            take asm::Mov.new(src => $.const.gen, dst => asm::Register.new());
+            take asm::Ret.new();
         }
     }
+
+    method parse($tokens is rw) {
+        chomp($tokens, t_return);
+
+        my $con = Constant.parse($tokens);
+
+        chomp($tokens, t_semicolon);
+
+        return self.new(const => $con);
+    }
+
 }
+
 
 class Function does Node {
     has Str $.name;
@@ -43,7 +83,22 @@ class Function does Node {
     }
 
     method gen() {
-        return Subroutine.new(name => $.name, instructions => $.body.gen);
+        return asm::Function.new(name => $.name, instructions => $.body.gen);
+    }
+
+    method parse($tokens is rw) {
+        chomp($tokens, t_int);
+        my $name = chomp($tokens, t_ident);
+
+        chomp($tokens, t_paren_l);
+        chomp($tokens, t_void);
+        chomp($tokens, t_paren_r);
+        chomp($tokens, t_brace_l);
+
+        my $ret = Return.parse($tokens);
+        chomp($tokens, t_brace_r);
+
+        return self.new(name => $name, body => $ret);
     }
 }
 
@@ -55,68 +110,20 @@ class Program does Node {
     }
 
     method gen() {
-        return Assembly.new(function => $.function.gen);
+        return asm::Program.new(function => $.function.gen);
     }
-}
 
-class Parser::UnexpectedToken is Exception {
-    has Str $.expected;
-    has Str $.found;
-
-    method message() {
-        "Expected $.expected, but found $.found"
+    method parse($tokens is rw) {
+        my $fun = Function.parse($tokens);
+        chomp($tokens, t_eof);
+        return self.new(function => $fun);
     }
 }
 
 class Parser is export {
-    has @.tokens;
-    has Int $!idx = 0;
-
-    method chomp($expected) {
-        my $tok = @.tokens[$!idx++];
-        if ($tok.type == $expected) {
-            return $tok.lexeme;
-        } else {
-            Parser::UnexpectedToken.new(
-                expected => $expected.Str,
-                found => $tok.type.Str
-            ).throw;
-        }
-    }
-
     method parse(@tokens) {
-        return self.new(tokens => @tokens).program;
-    }
-
-    method program() {
-        my $fun = self.function;
-        self.chomp(t_eof);
-
-        return Program.new(function => $fun);
-    }
-
-    method function() {
-        self.chomp(t_int);
-        my $name = self.chomp(t_ident);
-        self.chomp(t_paren_l);
-        self.chomp(t_void);
-        self.chomp(t_paren_r);
-        self.chomp(t_brace_l);
-        my $ret = self.return;
-        self.chomp(t_brace_r);
-
-        return Function.new(name => $name, body => $ret);
-    }
-
-    method return() {
-        self.chomp(t_return);
-        my $con = self.constant;
-        self.chomp(t_semicolon);
-
-        return Return.new(const => $con);
-    }
-
-    method constant() {
-        return Constant.new(integer => self.chomp(t_const).Int);
+        my $tokens = @tokens.iterator;
+        return Program.parse($tokens);
     }
 }
+

@@ -1,15 +1,15 @@
-unit module codegen;
+unit module asm;
 
 my $idnt = "        ";
 
-role AssemblyNode {
+role Node {
     method asm { ... }
     method Str { ... }
 }
 
-role Operand does AssemblyNode { }
+role Operand does Node { }
 
-class Immediate does Operand is export {
+our class Immediate does Operand {
     has Int $.integer;
 
     method Str {
@@ -21,7 +21,7 @@ class Immediate does Operand is export {
     }
 }
 
-class Register does Operand is export {
+our class Register does Operand {
     method Str {
         "Register()"
     }
@@ -31,9 +31,9 @@ class Register does Operand is export {
     }
 }
 
-role Instruction does AssemblyNode { }
+role Instruction does Node { }
 
-class Mov does Instruction is export {
+our class Mov does Instruction {
     has Operand $.src;
     has Operand $.dst;
 
@@ -46,7 +46,7 @@ class Mov does Instruction is export {
     }
 }
 
-class Ret does Instruction is export {
+our class Ret does Instruction {
     method Str {
         "Ret()"
     }
@@ -57,12 +57,12 @@ class Ret does Instruction is export {
 
 }
 
-class Subroutine does AssemblyNode is export {
+our class Function does Node {
     has Str $.name;
     has @.instructions;
 
     method Str {
-        "Subroutine( name=\"$.name\", instructions=[ {@.instructions} ] )"
+        "Function( name=\"$.name\", instructions=[ {@.instructions.map({.Str}).join(", ")} ] )"
     }
 
     method asm() {
@@ -73,11 +73,11 @@ class Subroutine does AssemblyNode is export {
     }
 }
 
-class Assembly does AssemblyNode is export {
-    has Subroutine $.function;
+our class Program does Node {
+    has Function $.function;
 
     method Str {
-        "Assembly( $.function )"
+        "Program( $.function )"
     }
 
     method asm() {

@@ -1,26 +1,6 @@
 unit module lex;
 
-enum TokenType is export <
-    t_ident
-    t_const
-    t_int
-    t_void
-    t_return
-    t_paren_l
-    t_paren_r
-    t_brace_l
-    t_brace_r
-    t_semicolon
-    t_tilde
-    t_minus
-    t_decrement
-    t_eof
->;
-
-class Token {
-    has TokenType $.type is required;
-    has Str $.lexeme;
-}
+use tok;
 
 class Lexer::UnrecognizedCharacter is Exception {
     has Str $.character;
@@ -67,7 +47,7 @@ class Lexer is export {
         return $.text.chars == 0;
     }
 
-    method parse(Str $text) {
+    method lex(Str $text) {
         my $this = self.new(text => $text);
 
         gather {

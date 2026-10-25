@@ -6,18 +6,18 @@ use parse;
 
 given @*ARGS[0] {
     when "lex" {
-        for Lexer.parse(slurp @*ARGS[1]) -> $token {
+        for Lexer.lex(slurp @*ARGS[1]) -> $token {
             "%-15s %s\n".printf($token.type, $token.lexeme);
         }
     }
     when "parse" {
-        say "{Parser.parse(Lexer.parse(slurp @*ARGS[1]))}"
+        say "{Parser.parse(Lexer.lex(slurp @*ARGS[1]))}"
     }
     when "codegen" {
-        say "{Parser.parse(Lexer.parse(slurp @*ARGS[1])).gen}"
+        say "{Parser.parse(Lexer.lex(slurp @*ARGS[1])).gen}"
     }
     when "assemble" {
-        print "{Parser.parse(Lexer.parse(slurp @*ARGS[1])).gen.asm}"
+        print "{Parser.parse(Lexer.lex(slurp @*ARGS[1])).gen.asm}"
     }
     default {
         say "Unknown function: $_";

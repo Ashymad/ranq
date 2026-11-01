@@ -8,6 +8,11 @@ my @stages = 'lex', 'parse', 'codegen', 'assemble';
 
 my $end = @*ARGS[0];
 
+if !@stages.first($end) {
+    say "Couldn't find stage: $end, has to be one of: {@stages}";
+    exit 2;
+}
+
 sub printok(@tokens) {
     for @tokens -> $token {
 	"%-15s %s\n".printf($token.type, $token.lexeme);

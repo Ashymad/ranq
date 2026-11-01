@@ -4,40 +4,41 @@ use lib "src";
 use lex;
 use parse;
 
-my %stages = lex => 1,
-	     parse => 2,
-	     codegen => 3,
-	     assemble => 4;
+my @stages = 'lex', 'parse', 'codegen', 'assemble';
 
-my $arg = @*ARGS[0];
+my $end = @*ARGS[0];
 
-if %stages«"$arg"»:exists {
-    my $end = %stages«"$arg"»;
+sub printok(@tokens) {
+    for @tokens -> $token {
+	"%-15s %s\n".printf($token.type, $token.lexeme);
+    }
+}
 
-    my @lexed = Lexer.lex(slurp @*ARGS[1]);
+my @tokens;
+my $data;
 
-    if $end == %stages<lex> {
-	for @lexed -> $token {
-	    "%-15s %s\n".printf($token.type, $token.lexeme);
+for @stages -> $stage {
+    given $stage {
+	when 'lex' {
+	    @tokens = Lexer.lex(slurp @*ARGS[1]);
 	}
-    } else {
-	my $parsed = Parser.parse(@lexed);
-
-	if $end == %stages<parse> {
-	    say "$parsed";
-	} else {
-	    my $genned = $parsed.gen;
-
-	    if $end == %stages<codegen> {
-		say "$genned";
-	    } else {
-		my $assembled = $genned.asm;
-
-		say "$assembled";
-	    }
+	when 'parse' {
+	    $data = Parser.parse(@tokens);
+	}
+	when 'codegen' {
+	    $data = $data.gen;
+	}
+	when 'assemble' {
+	    $data = $data.asm;
 	}
     }
-} else {
-    say "Unknown stage";
-    exit 2;
+
+    if $stage eq $end {
+	if $stage eq 'lex' {
+	    printok @tokens;
+	} else {
+	    say "$data";
+	}
+	last;
+    }
 }

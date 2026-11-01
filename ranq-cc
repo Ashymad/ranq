@@ -4,23 +4,40 @@ use lib "src";
 use lex;
 use parse;
 
-given @*ARGS[0] {
-    when "lex" {
-        for Lexer.lex(slurp @*ARGS[1]) -> $token {
-            "%-15s %s\n".printf($token.type, $token.lexeme);
-        }
+my %stages = lex => 1,
+	     parse => 2,
+	     codegen => 3,
+	     assemble => 4;
+
+my $arg = @*ARGS[0];
+
+if %stages«"$arg"»:exists {
+    my $end = %stages«"$arg"»;
+
+    my @lexed = Lexer.lex(slurp @*ARGS[1]);
+
+    if $end == %stages<lex> {
+	for @lexed -> $token {
+	    "%-15s %s\n".printf($token.type, $token.lexeme);
+	}
+    } else {
+	my $parsed = Parser.parse(@lexed);
+
+	if $end == %stages<parse> {
+	    say "$parsed";
+	} else {
+	    my $genned = $parsed.gen;
+
+	    if $end == %stages<codegen> {
+		say "$genned";
+	    } else {
+		my $assembled = $genned.asm;
+
+		say "$assembled";
+	    }
+	}
     }
-    when "parse" {
-        say "{Parser.parse(Lexer.lex(slurp @*ARGS[1]))}"
-    }
-    when "codegen" {
-        say "{Parser.parse(Lexer.lex(slurp @*ARGS[1])).gen}"
-    }
-    when "assemble" {
-        print "{Parser.parse(Lexer.lex(slurp @*ARGS[1])).gen.asm}"
-    }
-    default {
-        say "Unknown function: $_";
-        exit 2;
-    }
+} else {
+    say "Unknown stage";
+    exit 2;
 }

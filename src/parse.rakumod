@@ -12,7 +12,6 @@ class UnexpectedToken is Exception {
     }
 }
 
-
 sub chomp($tokens is rw, $expected) {
     my $tok = $tokens.pull-one;
     if ($tok.type == $expected) {
